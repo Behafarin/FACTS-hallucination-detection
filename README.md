@@ -1,0 +1,76 @@
+# FACTS — Framework for AI Consistency and Truth Scoring
+
+Unsupervised hallucination detection in LLM outputs using 
+semantic self-consistency signals across temperature-varied responses.
+
+**Drexel University | Data Science MS Capstone 2**  
+**Behafarin Emam | be379@drexel.edu**
+
+---
+
+## The Problem
+
+Large Language Models frequently generate fluent but factually 
+incorrect responses (hallucination). Detecting this automatically 
+is hard because hallucinated answers often sound just as confident 
+as correct ones.
+
+## Our Approach
+
+If a model truly knows the answer to a question, it should respond 
+consistently regardless of sampling temperature. We exploit this: 
+each question is sent to LLaMA 2-70B at 5 different temperatures 
+[0.1, 0.4, 0.7, 1.0, 1.3], and we measure how much the responses 
+diverge. High divergence = high hallucination risk.
+
+We compute two consistency signals:
+- **Signal 1 (TF-IDF baseline):** pairwise word-overlap similarity 
+  across 5 responses
+- **Signal 2 (LSA embeddings):** pairwise semantic similarity using 
+  Latent Semantic Analysis (TF-IDF + SVD, 100 dimensions)
+
+Validation uses TruthfulQA's category structure as a proxy label: 
+hallucination-prone categories (Conspiracies, Paranormal, Fiction) 
+should score higher inconsistency than stable categories 
+(Science, Health).
+
+## Data
+
+- **TruthfulQA:** 817 adversarial questions across 38 categories
+- **LLaMA 2-70B responses:** 5 temperatures × 817 questions = 
+  4,085 total responses, generated via Replicate API
+
+## Results (Preliminary)
+
+Both signals rank risk tiers correctly — High > Medium > Lower:
+
+| Risk Tier | TF-IDF Inconsistency | LSA Inconsistency |
+|-----------|---------------------|-------------------|
+| High      | 0.507               | 0.124             |
+| Medium    | 0.485               | 0.100             |
+| Lower     | 0.482               | 0.090             |
+
+Signal correlation: r = 0.71
+
+## Notebooks
+
+| Notebook | Description |
+|----------|-------------|
+| `Llama_2_70b_Chat.ipynb` | Phase 1: data generation via Replicate API |
+| `FACTS_Preprocessing.ipynb` | Category labeling, TF-IDF baseline signal |
+| `FACTS_Embeddings.ipynb` | LSA semantic embeddings, validation |
+
+## Next Steps
+
+- Replace LSA with transformer sentence encoder (all-MiniLM-L6-v2)
+- Add NLI pairwise contradiction scoring (Signal 3)
+- Build labeled holdout set (~50-100 questions) for evaluation
+- Report precision, recall, AUC against binary labels
+- Streamlit dashboard with per-question risk scores
+
+## References
+
+- Lin et al. (2022). TruthfulQA: Measuring How Models Mimic 
+  Human Falsehoods.
+- Manakul et al. (2023). SelfCheckGPT: Zero-Resource 
+  Black-Box Hallucination Detection for Generative LLMs.
